@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "dgSpecHash": "e4Ww6zN3WpM=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\kwgd\\Desktop\\Banco Senff\\OrderFlowNuget\\OrderFlow.Messaging.Core\\OrderFlow.Messaging.Core.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\kwgd\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\10.0.1\\microsoft.extensions.dependencyinjection.abstractions.10.0.1.nupkg.sha512",
+    "C:\\Users\\kwgd\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\10.0.1\\microsoft.extensions.logging.abstractions.10.0.1.nupkg.sha512",
+    "C:\\Users\\kwgd\\.nuget\\packages\\microsoft.extensions.options\\10.0.1\\microsoft.extensions.options.10.0.1.nupkg.sha512",
+    "C:\\Users\\kwgd\\.nuget\\packages\\microsoft.extensions.primitives\\10.0.1\\microsoft.extensions.primitives.10.0.1.nupkg.sha512",
+    "C:\\Users\\kwgd\\.nuget\\packages\\polly\\8.6.5\\polly.8.6.5.nupkg.sha512",
+    "C:\\Users\\kwgd\\.nuget\\packages\\polly.core\\8.6.5\\polly.core.8.6.5.nupkg.sha512",
+    "C:\\Users\\kwgd\\.nuget\\packages\\system.diagnostics.diagnosticsource\\10.0.1\\system.diagnostics.diagnosticsource.10.0.1.nupkg.sha512"
+  ],
+  "logs": []
+}
