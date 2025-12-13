@@ -1,16 +1,16 @@
 {
   "version": 3,
   "targets": {
-    "net9.0": {
+    "net10.0": {
       "Microsoft.Extensions.DependencyInjection.Abstractions/10.0.1": {
         "type": "package",
         "compile": {
-          "lib/net9.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll": {
+          "lib/net10.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll": {
             "related": ".xml"
           }
         },
         "runtime": {
-          "lib/net9.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll": {
+          "lib/net10.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll": {
             "related": ".xml"
           }
         },
@@ -21,16 +21,15 @@
       "Microsoft.Extensions.Logging.Abstractions/10.0.1": {
         "type": "package",
         "dependencies": {
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.1",
-          "System.Diagnostics.DiagnosticSource": "10.0.1"
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.1"
         },
         "compile": {
-          "lib/net9.0/Microsoft.Extensions.Logging.Abstractions.dll": {
+          "lib/net10.0/Microsoft.Extensions.Logging.Abstractions.dll": {
             "related": ".xml"
           }
         },
         "runtime": {
-          "lib/net9.0/Microsoft.Extensions.Logging.Abstractions.dll": {
+          "lib/net10.0/Microsoft.Extensions.Logging.Abstractions.dll": {
             "related": ".xml"
           }
         },
@@ -45,12 +44,12 @@
           "Microsoft.Extensions.Primitives": "10.0.1"
         },
         "compile": {
-          "lib/net9.0/Microsoft.Extensions.Options.dll": {
+          "lib/net10.0/Microsoft.Extensions.Options.dll": {
             "related": ".xml"
           }
         },
         "runtime": {
-          "lib/net9.0/Microsoft.Extensions.Options.dll": {
+          "lib/net10.0/Microsoft.Extensions.Options.dll": {
             "related": ".xml"
           }
         },
@@ -61,12 +60,12 @@
       "Microsoft.Extensions.Primitives/10.0.1": {
         "type": "package",
         "compile": {
-          "lib/net9.0/Microsoft.Extensions.Primitives.dll": {
+          "lib/net10.0/Microsoft.Extensions.Primitives.dll": {
             "related": ".xml"
           }
         },
         "runtime": {
-          "lib/net9.0/Microsoft.Extensions.Primitives.dll": {
+          "lib/net10.0/Microsoft.Extensions.Primitives.dll": {
             "related": ".xml"
           }
         },
@@ -103,20 +102,14 @@
           }
         }
       },
-      "System.Diagnostics.DiagnosticSource/10.0.1": {
-        "type": "package",
+      "Orderflow.Messaging.Abstractions/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v10.0",
         "compile": {
-          "lib/net9.0/System.Diagnostics.DiagnosticSource.dll": {
-            "related": ".xml"
-          }
+          "bin/placeholder/Orderflow.Messaging.Abstractions.dll": {}
         },
         "runtime": {
-          "lib/net9.0/System.Diagnostics.DiagnosticSource.dll": {
-            "related": ".xml"
-          }
-        },
-        "build": {
-          "buildTransitive/net8.0/_._": {}
+          "bin/placeholder/Orderflow.Messaging.Abstractions.dll": {}
         }
       }
     }
@@ -355,40 +348,18 @@
         "polly.core.nuspec"
       ]
     },
-    "System.Diagnostics.DiagnosticSource/10.0.1": {
-      "sha512": "wVYO4/71Pk177uQ3TG8ZQFS3Pnmr98cF9pYxnpuIb/bMnbEWsdZZoLU/euv29mfSi2/Iuypj0TRUchPk7aqBGg==",
-      "type": "package",
-      "path": "system.diagnostics.diagnosticsource/10.0.1",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "Icon.png",
-        "THIRD-PARTY-NOTICES.TXT",
-        "buildTransitive/net461/System.Diagnostics.DiagnosticSource.targets",
-        "buildTransitive/net462/_._",
-        "buildTransitive/net8.0/_._",
-        "buildTransitive/netcoreapp2.0/System.Diagnostics.DiagnosticSource.targets",
-        "lib/net10.0/System.Diagnostics.DiagnosticSource.dll",
-        "lib/net10.0/System.Diagnostics.DiagnosticSource.xml",
-        "lib/net462/System.Diagnostics.DiagnosticSource.dll",
-        "lib/net462/System.Diagnostics.DiagnosticSource.xml",
-        "lib/net8.0/System.Diagnostics.DiagnosticSource.dll",
-        "lib/net8.0/System.Diagnostics.DiagnosticSource.xml",
-        "lib/net9.0/System.Diagnostics.DiagnosticSource.dll",
-        "lib/net9.0/System.Diagnostics.DiagnosticSource.xml",
-        "lib/netstandard2.0/System.Diagnostics.DiagnosticSource.dll",
-        "lib/netstandard2.0/System.Diagnostics.DiagnosticSource.xml",
-        "system.diagnostics.diagnosticsource.10.0.1.nupkg.sha512",
-        "system.diagnostics.diagnosticsource.nuspec",
-        "useSharedDesignerContext.txt"
-      ]
+    "Orderflow.Messaging.Abstractions/1.0.0": {
+      "type": "project",
+      "path": "../Orderflow.Messaging.Abstractions/Orderflow.Messaging.Abstractions.csproj",
+      "msbuildProject": "../Orderflow.Messaging.Abstractions/Orderflow.Messaging.Abstractions.csproj"
     }
   },
   "projectFileDependencyGroups": {
-    "net9.0": [
+    "net10.0": [
       "Microsoft.Extensions.DependencyInjection.Abstractions >= 10.0.1",
       "Microsoft.Extensions.Logging.Abstractions >= 10.0.1",
       "Microsoft.Extensions.Options >= 10.0.1",
+      "Orderflow.Messaging.Abstractions >= 1.0.0",
       "Polly >= 8.6.5"
     ]
   },
@@ -414,19 +385,24 @@
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
-        "net9.0"
+        "net10.0"
       ],
       "sources": {
         "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
-        "net9.0": {
-          "targetAlias": "net9.0",
-          "projectReferences": {}
+        "net10.0": {
+          "targetAlias": "net10.0",
+          "projectReferences": {
+            "C:\\Users\\kwgd\\Desktop\\Banco Senff\\OrderFlowNuget\\Orderflow.Messaging.Abstractions\\Orderflow.Messaging.Abstractions.csproj": {
+              "projectPath": "C:\\Users\\kwgd\\Desktop\\Banco Senff\\OrderFlowNuget\\Orderflow.Messaging.Abstractions\\Orderflow.Messaging.Abstractions.csproj"
+            }
+          }
         }
       },
       "warningProperties": {
+        "allWarningsAsErrors": true,
         "warnAsError": [
           "NU1605"
         ]
@@ -434,13 +410,13 @@
       "restoreAuditProperties": {
         "enableAudit": "true",
         "auditLevel": "low",
-        "auditMode": "direct"
+        "auditMode": "all"
       },
       "SdkAnalysisLevel": "9.0.300"
     },
     "frameworks": {
-      "net9.0": {
-        "targetAlias": "net9.0",
+      "net10.0": {
+        "targetAlias": "net10.0",
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection.Abstractions": {
             "target": "Package",

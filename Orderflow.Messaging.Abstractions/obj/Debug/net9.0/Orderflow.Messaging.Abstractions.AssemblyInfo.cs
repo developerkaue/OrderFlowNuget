@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Orderflow.Messaging.Abstractions")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4b8e68217d816feea64d663be0d680ede7b547e4")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+76db335b3cddc9e0c14f7215e2a7f817e504dac8")]
 [assembly: System.Reflection.AssemblyProductAttribute("Orderflow.Messaging.Abstractions")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Orderflow.Messaging.Abstractions")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
