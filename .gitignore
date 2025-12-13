@@ -1,2 +1,47 @@
-*./vs
-*/obj/
+# VS/VS Code
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+
+# Build
+bin/
+obj/
+[Bb]uild/
+[Rr]elease/
+[Dd]ebug/
+x64/
+x86/
+
+# .NET
+*.nupkg
+*.snupkg
+packages/
+artifacts/
+
+# Logs
+*.log
+logs/
+
+# Configurações locais
+appsettings.*.json
+!appsettings.json
+secrets.json
+*.secret
+
+# Dependências (Node, etc)
+node_modules/
+
+# IDE
+.idea/
+*.sln.iml
+
+# Docker
+docker-compose.override.yml
+
+# Outros
+*.cache
+*.tmp
+*.temp
+.DS_Store
