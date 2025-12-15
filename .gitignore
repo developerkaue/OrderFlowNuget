@@ -19,6 +19,7 @@ x86/
 *.snupkg
 packages/
 artifacts/
+Debug/
 
 # Logs
 *.log
