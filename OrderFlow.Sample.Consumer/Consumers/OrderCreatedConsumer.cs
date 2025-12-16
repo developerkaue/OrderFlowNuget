@@ -1,5 +1,5 @@
 ﻿using Orderflow.Messaging.Abstractions.Abstractions;
-using OrderFlow.Contracts.Events;
+using OrderFlow.Contracts.Events.Contracts;
 
 namespace OrderFlow.Sample.Consumer.Consumers
 {

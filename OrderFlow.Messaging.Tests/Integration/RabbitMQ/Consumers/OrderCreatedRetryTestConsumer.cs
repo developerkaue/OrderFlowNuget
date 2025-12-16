@@ -1,4 +1,4 @@
-﻿using OrderFlow.Contracts.Events;
+﻿using OrderFlow.Contracts.Events.Contracts;
 using System;
 using System.Collections.Generic;
 using System.Text;

@@ -7,6 +7,7 @@ using OrderFlow.Messaging.RabbitMQ.Connection;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Microsoft.Extensions.DependencyInjection;
+using OrderFlow.Contracts.Events.Contracts;
 
 
 
@@ -122,8 +123,8 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
         }
 
         private async Task HandleMessageAsync<TMessage, TConsumer>(BasicDeliverEventArgs eventArgs)
-        where TMessage : IMessage
-        where TConsumer : IConsumer<TMessage>
+            where TMessage : IMessage
+            where TConsumer : IConsumer<TMessage>
         {
             using var scope = _serviceProvider.CreateScope();
 
@@ -134,6 +135,28 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
             var messageId = eventArgs.BasicProperties?.MessageId;
             var correlationId = eventArgs.BasicProperties?.CorrelationId;
 
+            IMessageProcessedStore? store = null;
+
+            if (string.IsNullOrWhiteSpace(messageId))
+            {
+                _logger.LogWarning(
+                    "Message received without MessageId, skipping idempotency check");
+            }
+            else
+            {
+                store = scope.ServiceProvider.GetRequiredService<IMessageProcessedStore>();
+
+                if (await store.HasBeenProcessedAsync(messageId))
+                {
+                    _logger.LogWarning(
+                        "Duplicate message detected {MessageId}, ACK and skipping",
+                        messageId);
+
+                    _channel.BasicAck(eventArgs.DeliveryTag, false);
+                    return;
+                }
+            }
+
             _logger.LogInformation(
                 "Consuming message {MessageType} | MessageId={MessageId} | CorrelationId={CorrelationId}",
                 typeof(TMessage).Name,
@@ -141,9 +164,42 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
                 correlationId
             );
 
-            await _retryPolicy.ExecuteAsync(() =>
-                consumer.ConsumeAsync(message, CancellationToken.None));
+            try
+            {
+                await _retryPolicy.ExecuteAsync(() =>
+                    consumer.ConsumeAsync(message, CancellationToken.None));
+
+                if (store != null && !string.IsNullOrWhiteSpace(messageId))
+                {
+                    await store.MarkAsProcessedAsync(messageId);
+                }
+
+                _channel.BasicAck(eventArgs.DeliveryTag, false);
+
+                _logger.LogInformation(
+                    "Message processed successfully {MessageType} | MessageId={MessageId}",
+                    typeof(TMessage).Name,
+                    messageId
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Message processing failed {MessageType} | MessageId={MessageId}",
+                    typeof(TMessage).Name,
+                    messageId
+                );
+
+                _channel.BasicNack(
+                    eventArgs.DeliveryTag,
+                    multiple: false,
+                    requeue: false);
+
+                throw;
+            }
         }
+
 
         private void DeclareInfrastructure<TMessage>()
         {

@@ -1,10 +1,10 @@
 ﻿using OrderFlow.Messaging.RabbitMQ.Extensions;
-using OrderFlow.Contracts.Events;
 using OrderFlow.Messaging.Tests.Integration.RabbitMQ.Consumers;
 using OrderFlow.Messaging.Tests.Integration.TestConfiguration;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using OrderFlow.Contracts.Events.Contracts;
 
 namespace OrderFlow.Messaging.Tests.Integration.RabbitMQ
 {

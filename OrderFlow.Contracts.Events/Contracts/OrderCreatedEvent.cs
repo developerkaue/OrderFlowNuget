@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace OrderFlow.Contracts.Events
+namespace OrderFlow.Contracts.Events.Contracts
 {
     public class OrderCreatedEvent : IMessage
     {
