@@ -15,6 +15,13 @@ namespace OrderFlow.Messaging.RabbitMQ.Configuration
 
         public string Exchange { get; set; } = "orderflow.exchange";
         public string Queue { get; set; } = "orderflow.queue";
+        public string RoutingKey { get; set; } = "order.created";
         public string DeadLetterQueue => $"{Queue}.dlq";
+        public string DeadLetterExchange { get; set; } = "orderflow.dlx";
+        public int RetryCount { get; set; } = 3;
+        public int RetryDelaySeconds { get; set; } = 2;
+        public string ExchangeName { get; set; } = "orderflow.exchange";
+
+
     }
 }
