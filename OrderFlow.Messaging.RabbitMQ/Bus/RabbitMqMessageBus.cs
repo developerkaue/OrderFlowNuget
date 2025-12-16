@@ -7,7 +7,6 @@ using OrderFlow.Messaging.RabbitMQ.Connection;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Microsoft.Extensions.DependencyInjection;
-using System.Threading.Channels;
 
 
 
@@ -111,17 +110,17 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
         {
             try
             {
+                using var scope = _serviceProvider.CreateScope();
+                var consumer = scope.ServiceProvider.GetRequiredService<TConsumer>();
+
                 var message = _serializer.Deserialize<TMessage>(eventArgs.Body.ToArray());
 
                 await _retryPolicy.ExecuteAsync(async () =>
                 {
-                    using var scope = _serviceProvider.CreateScope();
-                    var consumer = scope.ServiceProvider.GetRequiredService<TConsumer>();
-
                     await consumer.ConsumeAsync(message, CancellationToken.None);
                 });
 
-                _channel.BasicAck(eventArgs.DeliveryTag, false);
+                        _channel.BasicAck(deliveryTag: eventArgs.DeliveryTag, multiple: false);
             }
             catch
             {
