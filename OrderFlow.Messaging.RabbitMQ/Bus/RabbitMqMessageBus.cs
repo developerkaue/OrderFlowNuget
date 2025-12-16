@@ -21,6 +21,9 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
         private readonly ILogger<RabbitMqMessageBus> _logger;
         private readonly IServiceProvider _serviceProvider;
 
+        private static readonly HashSet<string> DeclaredQueues = new();
+
+
         private IModel _channel;
 
         public RabbitMqMessageBus(
@@ -43,18 +46,26 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
         public async Task PublishAsync<TMessage>(TMessage message)
             where TMessage : IMessage
         {
-            var exchange = _options.ExchangeName;
-            var routingKey = typeof(TMessage).Name;
-
-            _channel.ExchangeDeclare(
-                exchange: exchange,
-                type: ExchangeType.Direct,
-                durable: true);
-
-            var body = _serializer.Serialize(message);
+            var messageId = Guid.NewGuid().ToString();
+            var correlationId = Guid.NewGuid().ToString();
 
             var properties = _channel.CreateBasicProperties();
             properties.Persistent = true;
+            properties.MessageId = messageId;
+            properties.CorrelationId = correlationId;
+            properties.Headers = new Dictionary<string, object>();
+
+            var body = _serializer.Serialize(message);
+
+            var exchange = _options.ExchangeName;
+            var routingKey = typeof(TMessage).Name;
+
+            _logger.LogInformation(
+                "Publishing message {MessageType} | MessageId={MessageId} | CorrelationId={CorrelationId}",
+                typeof(TMessage).Name,
+                messageId,
+                correlationId
+            );
 
             _channel.BasicPublish(
                 exchange: exchange,
@@ -70,31 +81,38 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
          where TMessage : IMessage
          where TConsumer : IConsumer<TMessage>
         {
-            var messageName = typeof(TMessage).Name;
-            var exchangeName = _options.ExchangeName;
-            var queueName = $"{messageName}.queue";
-            var routingKey = messageName;
+            DeclareInfrastructureOnce<TMessage>();
 
-            _channel.ExchangeDeclare(
-                exchange: exchangeName,
-                type: ExchangeType.Direct,
-                durable: true);
-
-            _channel.QueueDeclare(
-                queue: queueName,
-                durable: true,
-                exclusive: false,
-                autoDelete: false);
-
-            _channel.QueueBind(
-                queue: queueName,
-                exchange: exchangeName,
-                routingKey: routingKey);
+            var queueName = $"{typeof(TMessage).Name}.queue";
 
             var consumer = new AsyncEventingBasicConsumer(_channel);
+
             consumer.Received += async (_, ea) =>
             {
-                await HandleMessageAsync<TMessage, TConsumer>(ea);
+                try
+                {
+                    await HandleMessageAsync<TMessage, TConsumer>(ea);
+
+                    _channel.BasicAck(ea.DeliveryTag, false);
+
+                    _logger.LogInformation(
+                        "Message processed successfully {MessageType} | MessageId={MessageId}",
+                        typeof(TMessage).Name,
+                        ea.BasicProperties?.MessageId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(
+                        ex,
+                        "Message failed permanently {MessageType} | MessageId={MessageId}",
+                        typeof(TMessage).Name,
+                        ea.BasicProperties?.MessageId);
+
+                    _channel.BasicNack(
+                        deliveryTag: ea.DeliveryTag,
+                        multiple: false,
+                        requeue: false);
+                }
             };
 
             _channel.BasicConsume(
@@ -103,32 +121,85 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
                 consumer: consumer);
         }
 
-
         private async Task HandleMessageAsync<TMessage, TConsumer>(BasicDeliverEventArgs eventArgs)
-            where TMessage : IMessage
-            where TConsumer : IConsumer<TMessage>
+        where TMessage : IMessage
+        where TConsumer : IConsumer<TMessage>
         {
-            try
-            {
-                using var scope = _serviceProvider.CreateScope();
-                var consumer = scope.ServiceProvider.GetRequiredService<TConsumer>();
+            using var scope = _serviceProvider.CreateScope();
 
-                var message = _serializer.Deserialize<TMessage>(eventArgs.Body.ToArray());
+            var consumer = scope.ServiceProvider.GetRequiredService<TConsumer>();
 
-                await _retryPolicy.ExecuteAsync(async () =>
-                {
-                    await consumer.ConsumeAsync(message, CancellationToken.None);
-                });
+            var message = _serializer.Deserialize<TMessage>(eventArgs.Body.ToArray());
 
-                        _channel.BasicAck(deliveryTag: eventArgs.DeliveryTag, multiple: false);
-            }
-            catch
-            {
-                // Se falhar mesmo após retries
-                _channel.BasicNack(eventArgs.DeliveryTag, false, requeue: false);
-                throw;
-            }
+            var messageId = eventArgs.BasicProperties?.MessageId;
+            var correlationId = eventArgs.BasicProperties?.CorrelationId;
+
+            _logger.LogInformation(
+                "Consuming message {MessageType} | MessageId={MessageId} | CorrelationId={CorrelationId}",
+                typeof(TMessage).Name,
+                messageId,
+                correlationId
+            );
+
+            await _retryPolicy.ExecuteAsync(() =>
+                consumer.ConsumeAsync(message, CancellationToken.None));
         }
+
+        private void DeclareInfrastructure<TMessage>()
+        {
+            var messageName = typeof(TMessage).Name;
+            var queueName = $"{messageName}.queue";
+
+            _channel.ExchangeDeclare(
+                exchange: _options.ExchangeName,
+                type: ExchangeType.Direct,
+                durable: true);
+
+            _channel.ExchangeDeclare(
+                exchange: _options.DeadLetterExchange,
+                type: ExchangeType.Direct,
+                durable: true);
+
+            var queueArgs = new Dictionary<string, object>
+            {
+                { "x-dead-letter-exchange", _options.DeadLetterExchange }
+            };
+
+            _channel.QueueDeclare(
+                queue: queueName,
+                durable: true,
+                exclusive: false,
+                autoDelete: false,
+                arguments: queueArgs);
+
+            _channel.QueueBind(
+                queue: queueName,
+                exchange: _options.ExchangeName,
+                routingKey: messageName);
+
+            _channel.QueueDeclare(
+                queue: $"{queueName}.dlq",
+                durable: true,
+                exclusive: false,
+                autoDelete: false);
+
+            _channel.QueueBind(
+                queue: $"{queueName}.dlq",
+                exchange: _options.DeadLetterExchange,
+                routingKey: messageName);
+        }
+
+
+        private void DeclareInfrastructureOnce<TMessage>()
+        {
+            var queue = typeof(TMessage).Name;
+
+            if (!DeclaredQueues.Add(queue))
+                return;
+
+            DeclareInfrastructure<TMessage>();
+        }
+
 
 
     }
