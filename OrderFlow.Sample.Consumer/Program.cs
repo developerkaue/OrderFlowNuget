@@ -1,22 +1,49 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Orderflow.Messaging.Abstractions.Abstractions;
-using OrderFlow.Messaging.RabbitMQ.Extensions;
-using OrderFlow.Sample.Consumer;
 using OrderFlow.Contracts.Events;
+using OrderFlow.Messaging.Core.Extensions;
+using OrderFlow.Messaging.RabbitMQ;
+using OrderFlow.Messaging.RabbitMQ.Extensions;
+using OrderFlow.Sample.Consumer.Consumers;
 
+var host = Host.CreateDefaultBuilder(args)
+    .ConfigureServices((context, services) =>
+    {
+        services.AddRabbitMqMessaging(options =>
+        {
+            options.Host = "localhost";
+            options.Port = 5672;
+            options.Username = "guest";
+            options.Password = "guest";
 
-var builder = Host.CreateApplicationBuilder(args);
+            options.ExchangeName = "orderflow.exchange";
+            options.Queue = "orderflow.order-created.queue";
+            options.RoutingKey = "order.created";
 
-builder.Services.AddRabbitMqMessaging(options =>
-{
-    options.Host = "localhost";
-    options.ExchangeName = "orderflow.exchange";
-});
+            options.RetryCount = 3;
+            options.RetryDelaySeconds = 2;
+        });
 
-builder.Services.AddTransient<IConsumer<OrderCreatedEvent>, OrderCreatedConsumer>();
-builder.Services.AddHostedService<Worker>();
+        services.AddScoped<OrderCreatedConsumer>();
 
-var host = builder.Build();
-var bus = host.Services.GetRequiredService<IMessageBus>();
-bus.Subscribe<OrderCreatedEvent, OrderCreatedConsumer>();
+        services.AddHostedService(provider =>
+        {
+            var bus = provider.GetRequiredService<IMessageBus>();
+
+            bus.Subscribe<OrderCreatedEvent, OrderCreatedConsumer>();
+
+            return new BackgroundServiceWrapper();
+        });
+    })
+    .Build();
 
 await host.RunAsync();
+
+
+// Serviço vazio apenas para manter o host vivo
+sealed class BackgroundServiceWrapper : BackgroundService
+{
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+        => Task.Delay(Timeout.Infinite, stoppingToken);
+}

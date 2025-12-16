@@ -1,29 +1,38 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Orderflow.Messaging.Abstractions.Abstractions;
 using OrderFlow.Contracts.Events;
+using OrderFlow.Messaging.Core.Extensions;
+using OrderFlow.Messaging.RabbitMQ;
 using OrderFlow.Messaging.RabbitMQ.Extensions;
 
-var builder = Host.CreateApplicationBuilder(args);
+var host = Host.CreateDefaultBuilder(args)
+    .ConfigureServices(services =>
+    {
+        services.AddRabbitMqMessaging(options =>
+        {
+            options.Host = "localhost";
+            options.Port = 5672;
+            options.Username = "guest";
+            options.Password = "guest";
 
-builder.Services.AddRabbitMqMessaging(options =>
-{
-    options.Host = "localhost";
-    options.ExchangeName = "orderflow.exchange";
-});
-
-var host = builder.Build();
+            options.ExchangeName = "orderflow.exchange";
+            options.Queue = "orderflow.order-created.queue";
+            options.RoutingKey = "order.created";
+        });
+    })
+    .Build();
 
 var bus = host.Services.GetRequiredService<IMessageBus>();
 
-while (true)
+var orderEvent = new OrderCreatedEvent
 {
-    var orderEvent = new OrderCreatedEvent
-    {
-        OrderId = Guid.NewGuid(),
-        CreatedAt = DateTime.UtcNow
-    };
+    OrderId = Guid.NewGuid(),
+    CreatedAt = DateTime.UtcNow
+};
 
-    await bus.PublishAsync(orderEvent);
+await bus.PublishAsync(orderEvent);
 
-    Console.WriteLine($"Pedido publicado: {orderEvent.OrderId}");
-    await Task.Delay(5000);
-}
+Console.WriteLine("OrderCreatedEvent published!");
+
+await host.StopAsync();
