@@ -4,8 +4,8 @@ using System.Text;
 
 namespace Orderflow.Messaging.Abstractions.Abstractions
 {
-    public interface IConsumer
+    public interface IConsumer<TMessage> where TMessage : IMessage
     {
-        void Subscribe<T>(Func<T, Task> handler, CancellationToken cancellationToken = default)where T : class, IMessage;
+        Task ConsumeAsync(TMessage message, CancellationToken cancellationToken);
     }
 }

@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\OrderFlow.Contracts.Events\OrderFlow.Contracts.Events.csproj" />
     <ProjectReference Include="..\Orderflow.Messaging.Abstractions\Orderflow.Messaging.Abstractions.csproj" />
     <ProjectReference Include="..\OrderFlow.Messaging.Core\OrderFlow.Messaging.Core.csproj" />
 	<ProjectReference Include="..\OrderFlow.Messaging.RabbitMQ\OrderFlow.Messaging.RabbitMQ.csproj" />

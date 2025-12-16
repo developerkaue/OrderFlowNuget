@@ -1,23 +1,29 @@
-var builder = WebApplication.CreateBuilder(args);
+using Orderflow.Messaging.Abstractions.Abstractions;
+using OrderFlow.Contracts.Events;
+using OrderFlow.Messaging.RabbitMQ.Extensions;
 
-// Add services to the container.
+var builder = Host.CreateApplicationBuilder(args);
 
-builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
-
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+builder.Services.AddRabbitMqMessaging(options =>
 {
-    app.MapOpenApi();
+    options.Host = "localhost";
+    options.ExchangeName = "orderflow.exchange";
+});
+
+var host = builder.Build();
+
+var bus = host.Services.GetRequiredService<IMessageBus>();
+
+while (true)
+{
+    var orderEvent = new OrderCreatedEvent
+    {
+        OrderId = Guid.NewGuid(),
+        CreatedAt = DateTime.UtcNow
+    };
+
+    await bus.PublishAsync(orderEvent);
+
+    Console.WriteLine($"Pedido publicado: {orderEvent.OrderId}");
+    await Task.Delay(5000);
 }
-
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
-
-app.Run();

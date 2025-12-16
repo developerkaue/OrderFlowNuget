@@ -9,6 +9,7 @@
       "OrderFlow.Sample.Consumer/1.0.0": {
         "dependencies": {
           "Microsoft.Extensions.Hosting": "9.0.10",
+          "OrderFlow.Contracts.Events": "1.0.0",
           "OrderFlow.Messaging.RabbitMQ": "1.0.0"
         },
         "runtime": {
@@ -423,6 +424,17 @@
           }
         }
       },
+      "OrderFlow.Contracts.Events/1.0.0": {
+        "dependencies": {
+          "Orderflow.Messaging.Abstractions": "1.0.0"
+        },
+        "runtime": {
+          "OrderFlow.Contracts.Events.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
       "Orderflow.Messaging.Abstractions/1.0.0": {
         "runtime": {
           "Orderflow.Messaging.Abstractions.dll": {
@@ -686,6 +698,11 @@
       "sha512": "sha512-Jc+az1pTMujPLDn2j5eqSfzlO7j/T1K/LB7THxdfRWOxujE4zaitUqBs7sv1t6/xmmvpU6Xx3IofCs4owYH0yQ==",
       "path": "system.diagnostics.eventlog/9.0.10",
       "hashPath": "system.diagnostics.eventlog.9.0.10.nupkg.sha512"
+    },
+    "OrderFlow.Contracts.Events/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
     },
     "Orderflow.Messaging.Abstractions/1.0.0": {
       "type": "project",

@@ -9,6 +9,7 @@
       "OrderFlow.Sample.Publisher/1.0.0": {
         "dependencies": {
           "Microsoft.AspNetCore.OpenApi": "9.0.10",
+          "OrderFlow.Contracts.Events": "1.0.0",
           "OrderFlow.Messaging.RabbitMQ": "1.0.0"
         },
         "runtime": {
@@ -58,6 +59,17 @@
           "lib/netstandard2.0/RabbitMQ.Client.dll": {
             "assemblyVersion": "6.0.0.0",
             "fileVersion": "6.8.1.0"
+          }
+        }
+      },
+      "OrderFlow.Contracts.Events/1.0.0": {
+        "dependencies": {
+          "Orderflow.Messaging.Abstractions": "1.0.0"
+        },
+        "runtime": {
+          "OrderFlow.Contracts.Events.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
           }
         }
       },
@@ -136,6 +148,11 @@
       "sha512": "sha512-jNsmGgmCNw2S/NzskeN2ijtGywtH4Sk/G6jWUTD5sY9SrC27Xz6BsLIiB8hdsfjeyWCa4j4GvCIGkpE8wrjU1Q==",
       "path": "rabbitmq.client/6.8.1",
       "hashPath": "rabbitmq.client.6.8.1.nupkg.sha512"
+    },
+    "OrderFlow.Contracts.Events/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
     },
     "Orderflow.Messaging.Abstractions/1.0.0": {
       "type": "project",

@@ -1,13 +1,15 @@
 ﻿using Orderflow.Messaging.Abstractions.Abstractions;
+using System;
+using System.Collections.Generic;
+using System.Text;
 
-namespace OrderFlow.Messaging.Tests.Integration.Events
+namespace OrderFlow.Contracts.Events
 {
-    public sealed record OrderCreatedEvent(
-        Guid OrderId,
-        decimal Amount
-    ) : IMessage
+    public class OrderCreatedEvent : IMessage
     {
         public Guid MessageId { get; set; } = Guid.NewGuid();
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public Guid OrderId { get; set; }
     }
 }

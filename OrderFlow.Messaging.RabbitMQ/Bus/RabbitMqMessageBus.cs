@@ -1,11 +1,13 @@
 ﻿using Microsoft.Extensions.Logging;
+using Orderflow.Messaging.Abstractions.Abstractions;
 using OrderFlow.Messaging.Core.Retry;
 using OrderFlow.Messaging.Core.Serialization;
 using OrderFlow.Messaging.RabbitMQ.Configuration;
 using OrderFlow.Messaging.RabbitMQ.Connection;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
-using Orderflow.Messaging.Abstractions.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
+using System.Threading.Channels;
 
 
 
@@ -18,12 +20,16 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
         private readonly IRetryPolicy _retryPolicy;
         private readonly RabbitMqOptions _options;
         private readonly ILogger<RabbitMqMessageBus> _logger;
+        private readonly IServiceProvider _serviceProvider;
+
+        private IModel _channel;
 
         public RabbitMqMessageBus(
             IRabbitMqConnection connection,
             IMessageSerializer serializer,
             IRetryPolicy retryPolicy,
             RabbitMqOptions options,
+            IServiceProvider serviceProvider,
             ILogger<RabbitMqMessageBus> logger)
         {
             _connection = connection;
@@ -31,97 +37,100 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
             _retryPolicy = retryPolicy;
             _options = options;
             _logger = logger;
+            _serviceProvider = serviceProvider;
+            _channel = _connection.CreateChannel();
         }
 
-        public async Task PublishAsync<T>(
-            T message,
-            CancellationToken cancellationToken = default)
-            where T : class, IMessage
+        public async Task PublishAsync<TMessage>(TMessage message)
+            where TMessage : IMessage
         {
-            await _retryPolicy.ExecuteAsync(() =>
-            {
-                using var channel = _connection.CreateChannel();
+            var exchange = _options.ExchangeName;
+            var routingKey = typeof(TMessage).Name;
 
-                channel.ExchangeDeclare(
-                    exchange: _options.Exchange,
-                    type: ExchangeType.Topic,
-                    durable: true);
-
-                var body = _serializer.Serialize(message);
-
-                var props = channel.CreateBasicProperties();
-                props.Persistent = true;
-
-                channel.BasicPublish(
-                    exchange: _options.Exchange,
-                    routingKey: typeof(T).Name,
-                    basicProperties: props,
-                    body: body);
-
-                _logger.LogInformation(
-                    "Message {MessageId} published",
-                    message.MessageId);
-
-                return Task.CompletedTask;
-            }, cancellationToken);
-        }
-
-        public void Subscribe<T>(
-            Func<T, Task> handler,
-            CancellationToken cancellationToken = default)
-            where T : class, IMessage
-        {
-            var channel = _connection.CreateChannel();
-
-            channel.ExchangeDeclare(
-                exchange: _options.Exchange,
-                type: ExchangeType.Topic,
+            _channel.ExchangeDeclare(
+                exchange: exchange,
+                type: ExchangeType.Direct,
                 durable: true);
 
-            channel.QueueDeclare(
-                queue: _options.Queue,
+            var body = _serializer.Serialize(message);
+
+            var properties = _channel.CreateBasicProperties();
+            properties.Persistent = true;
+
+            _channel.BasicPublish(
+                exchange: exchange,
+                routingKey: routingKey,
+                basicProperties: properties,
+                body: body);
+
+            await Task.CompletedTask;
+        }
+
+
+        public void Subscribe<TMessage, TConsumer>()
+         where TMessage : IMessage
+         where TConsumer : IConsumer<TMessage>
+        {
+            var messageName = typeof(TMessage).Name;
+            var exchangeName = _options.ExchangeName;
+            var queueName = $"{messageName}.queue";
+            var routingKey = messageName;
+
+            _channel.ExchangeDeclare(
+                exchange: exchangeName,
+                type: ExchangeType.Direct,
+                durable: true);
+
+            _channel.QueueDeclare(
+                queue: queueName,
                 durable: true,
                 exclusive: false,
-                autoDelete: false,
-                arguments: new Dictionary<string, object>
-                {
-                { "x-dead-letter-exchange", "" },
-                { "x-dead-letter-routing-key", _options.DeadLetterQueue }
-                });
+                autoDelete: false);
 
-            channel.QueueBind(
-                queue: _options.Queue,
-                exchange: _options.Exchange,
-                routingKey: typeof(T).Name);
+            _channel.QueueBind(
+                queue: queueName,
+                exchange: exchangeName,
+                routingKey: routingKey);
 
-            var consumer = new AsyncEventingBasicConsumer(channel);
-
-            consumer.Received += async (_, args) =>
+            var consumer = new AsyncEventingBasicConsumer(_channel);
+            consumer.Received += async (_, ea) =>
             {
-                try
-                {
-                    var message = _serializer.Deserialize<T>(args.Body.ToArray());
-
-                    await _retryPolicy.ExecuteAsync(() =>
-                        handler(message), cancellationToken);
-
-                    channel.BasicAck(args.DeliveryTag, multiple: false);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Message processing failed");
-
-                    channel.BasicNack(
-                        args.DeliveryTag,
-                        multiple: false,
-                        requeue: false);
-                }
+                await HandleMessageAsync<TMessage, TConsumer>(ea);
             };
 
-            channel.BasicConsume(
-                queue: _options.Queue,
+            _channel.BasicConsume(
+                queue: queueName,
                 autoAck: false,
                 consumer: consumer);
         }
+
+
+        private async Task HandleMessageAsync<TMessage, TConsumer>(BasicDeliverEventArgs eventArgs)
+            where TMessage : IMessage
+            where TConsumer : IConsumer<TMessage>
+        {
+            try
+            {
+                var message = _serializer.Deserialize<TMessage>(eventArgs.Body.ToArray());
+
+                await _retryPolicy.ExecuteAsync(async () =>
+                {
+                    using var scope = _serviceProvider.CreateScope();
+                    var consumer = scope.ServiceProvider.GetRequiredService<TConsumer>();
+
+                    await consumer.ConsumeAsync(message, CancellationToken.None);
+                });
+
+                _channel.BasicAck(eventArgs.DeliveryTag, false);
+            }
+            catch
+            {
+                // Se falhar mesmo após retries
+                _channel.BasicNack(eventArgs.DeliveryTag, false, requeue: false);
+                throw;
+            }
+        }
+
+
     }
 }

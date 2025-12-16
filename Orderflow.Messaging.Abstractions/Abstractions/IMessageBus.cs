@@ -4,7 +4,13 @@ using System.Text;
 
 namespace Orderflow.Messaging.Abstractions.Abstractions
 {
-    public interface IMessageBus : IPublisher, IConsumer
+    public interface IMessageBus
     {
+        Task PublishAsync<TMessage>(TMessage message)
+        where TMessage : IMessage;
+
+        void Subscribe<TMessage, TConsumer>()
+            where TMessage : IMessage
+            where TConsumer : IConsumer<TMessage>;
     }
 }
