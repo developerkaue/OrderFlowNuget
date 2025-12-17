@@ -5,11 +5,13 @@ namespace OrderFlow.Messaging.RabbitMQ.Connection
 {
     public sealed class RabbitMqConnection : IRabbitMqConnection
     {
-        private readonly IConnection _connection;
+        private readonly ConnectionFactory _factory;
+        private IConnection? _connection;
+        private readonly object _lock = new();
 
         public RabbitMqConnection(RabbitMqOptions options)
         {
-            var factory = new ConnectionFactory
+            _factory = new ConnectionFactory
             {
                 HostName = options.Host,
                 Port = options.Port,
@@ -17,15 +19,47 @@ namespace OrderFlow.Messaging.RabbitMQ.Connection
                 Password = options.Password,
                 DispatchConsumersAsync = true
             };
-
-            _connection = factory.CreateConnection();
         }
 
-        public IModel CreateChannel() => _connection.CreateModel();
+        public IModel CreateChannel()
+        {
+            EnsureConnection();
+            return _connection!.CreateModel();
+        }
+
+        private void EnsureConnection()
+        {
+            if (_connection is { IsOpen: true })
+                return;
+
+            lock (_lock)
+            {
+                if (_connection is { IsOpen: true })
+                    return;
+
+                var retries = 10;
+
+                while (retries-- > 0)
+                {
+                    try
+                    {
+                        _connection = _factory.CreateConnection();
+                        return;
+                    }
+                    catch
+                    {
+                        Thread.Sleep(2000);
+                    }
+                }
+
+                throw new InvalidOperationException(
+                    "Could not connect to RabbitMQ after multiple attempts.");
+            }
+        }
 
         public void Dispose()
         {
-            _connection.Dispose();
+            _connection?.Dispose();
         }
     }
 }

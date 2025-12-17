@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Orderflow.Messaging.Abstractions.Abstractions;
-using OrderFlow.Contracts.Events;
+using OrderFlow.Contracts.Events.Contracts;
 using OrderFlow.Messaging.Core.Extensions;
 using OrderFlow.Messaging.RabbitMQ;
 using OrderFlow.Messaging.RabbitMQ.Extensions;
@@ -12,7 +12,7 @@ var host = Host.CreateDefaultBuilder(args)
     {
         services.AddRabbitMqMessaging(options =>
         {
-            options.Host = "localhost";
+            options.Host = "rabbitmq"; 
             options.Port = 5672;
             options.Username = "guest";
             options.Password = "guest";
@@ -25,25 +25,38 @@ var host = Host.CreateDefaultBuilder(args)
             options.RetryDelaySeconds = 2;
         });
 
+
         services.AddScoped<OrderCreatedConsumer>();
+        services.AddSingleton<IMessageProcessedStore, InMemoryMessageProcessedStore>();
 
-        services.AddHostedService(provider =>
-        {
-            var bus = provider.GetRequiredService<IMessageBus>();
 
-            bus.Subscribe<OrderCreatedEvent, OrderCreatedConsumer>();
-
-            return new BackgroundServiceWrapper();
-        });
+        services.AddHostedService<BackgroundServiceWrapper>();
     })
     .Build();
+
+
 
 await host.RunAsync();
 
 
 // Serviço vazio apenas para manter o host vivo
-sealed class BackgroundServiceWrapper : BackgroundService
+public sealed class BackgroundServiceWrapper : BackgroundService
 {
+    private readonly IServiceProvider _provider;
+
+    public BackgroundServiceWrapper(IServiceProvider provider)
+    {
+        _provider = provider;
+    }
+
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
-        => Task.Delay(Timeout.Infinite, stoppingToken);
+    {
+        using var scope = _provider.CreateScope();
+
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+
+        bus.Subscribe<OrderCreatedEvent, OrderCreatedConsumer>();
+
+        return Task.CompletedTask;
+    }
 }

@@ -1,4 +1,3 @@
-version: "3.9"
 
 services:
   rabbitmq:
@@ -18,21 +17,31 @@ services:
       timeout: 5s
       retries: 5
 
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: orderflow-sqlserver
-    ports:
-      - "1433:1433"
+  consumer:
+    build:
+      context: .
+      dockerfile: OrderFlow.Sample.Consumer/Dockerfile
     environment:
-      SA_PASSWORD: ${SA_PASSWORD}
-      ACCEPT_EULA: ${ACCEPT_EULA}
-    volumes:
-      - sqlserver_data:/var/opt/mssql
-    healthcheck:
-      test: ["CMD", "/opt/mssql-tools/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "${SA_PASSWORD}", "-Q", "SELECT 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: 5672
+      RabbitMq__Username: ${RABBITMQ_DEFAULT_USER}
+      RabbitMq__Password: ${RABBITMQ_DEFAULT_PASS}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  publisher:
+    build:
+      context: .
+      dockerfile: OrderFlow.Sample.Publisher/Dockerfile
+    environment:
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: 5672
+      RabbitMq__Username: ${RABBITMQ_DEFAULT_USER}
+      RabbitMq__Password: ${RABBITMQ_DEFAULT_PASS}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
 
 volumes:
   sqlserver_data:

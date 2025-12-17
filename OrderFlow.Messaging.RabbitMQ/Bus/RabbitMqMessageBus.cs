@@ -7,6 +7,7 @@ using OrderFlow.Messaging.RabbitMQ.Connection;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Microsoft.Extensions.DependencyInjection;
+using OrderFlow.Contracts.Events.Contracts;
 
 
 
@@ -47,6 +48,7 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
             where TMessage : IMessage
         {
             var messageId = Guid.NewGuid().ToString();
+            
             var correlationId = Guid.NewGuid().ToString();
 
             var properties = _channel.CreateBasicProperties();
@@ -89,36 +91,20 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
 
             consumer.Received += async (_, ea) =>
             {
-                try
-                {
-                    await HandleMessageAsync<TMessage, TConsumer>(ea);
-
-                    _channel.BasicAck(ea.DeliveryTag, false);
-
-                    _logger.LogInformation(
-                        "Message processed successfully {MessageType} | MessageId={MessageId}",
-                        typeof(TMessage).Name,
-                        ea.BasicProperties?.MessageId);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(
-                        ex,
-                        "Message failed permanently {MessageType} | MessageId={MessageId}",
-                        typeof(TMessage).Name,
-                        ea.BasicProperties?.MessageId);
-
-                    _channel.BasicNack(
-                        deliveryTag: ea.DeliveryTag,
-                        multiple: false,
-                        requeue: false);
-                }
+                await HandleMessageAsync<TMessage, TConsumer>(ea);
             };
 
             _channel.BasicConsume(
                 queue: queueName,
                 autoAck: false,
-                consumer: consumer);
+                consumer: consumer
+            );
+
+            _logger.LogInformation(
+                "Subscribed to queue {QueueName} for message {MessageType}",
+                queueName,
+                typeof(TMessage).Name
+            );
         }
 
         private async Task HandleMessageAsync<TMessage, TConsumer>(BasicDeliverEventArgs eventArgs)
@@ -128,11 +114,26 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
             using var scope = _serviceProvider.CreateScope();
 
             var consumer = scope.ServiceProvider.GetRequiredService<TConsumer>();
+            var store = scope.ServiceProvider.GetRequiredService<IMessageProcessedStore>();
 
             var message = _serializer.Deserialize<TMessage>(eventArgs.Body.ToArray());
 
             var messageId = eventArgs.BasicProperties?.MessageId;
             var correlationId = eventArgs.BasicProperties?.CorrelationId;
+
+            if (!string.IsNullOrWhiteSpace(messageId))
+            {
+                if (await store.HasBeenProcessedAsync(messageId))
+                {
+                    _logger.LogWarning(
+                        "Duplicate message detected {MessageId}, ACK and skipping",
+                        messageId
+                    );
+
+                    _channel.BasicAck(eventArgs.DeliveryTag, false);
+                    return;
+                }
+            }
 
             _logger.LogInformation(
                 "Consuming message {MessageType} | MessageId={MessageId} | CorrelationId={CorrelationId}",
@@ -141,9 +142,40 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
                 correlationId
             );
 
-            await _retryPolicy.ExecuteAsync(() =>
-                consumer.ConsumeAsync(message, CancellationToken.None));
+            try
+            {
+                await _retryPolicy.ExecuteAsync(() =>
+                    consumer.ConsumeAsync(message, CancellationToken.None));
+
+                if (!string.IsNullOrWhiteSpace(messageId))
+                {
+                    await store.MarkAsProcessedAsync(messageId);
+                }
+
+                _channel.BasicAck(eventArgs.DeliveryTag, false);
+
+                _logger.LogInformation(
+                    "Message processed successfully {MessageType} | MessageId={MessageId}",
+                    typeof(TMessage).Name,
+                    messageId
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Message failed permanently {MessageType} | MessageId={MessageId}",
+                    typeof(TMessage).Name,
+                    messageId
+                );
+
+                _channel.BasicNack(eventArgs.DeliveryTag, false, requeue: false);
+                throw;
+            }
         }
+
+
+
 
         private void DeclareInfrastructure<TMessage>()
         {
