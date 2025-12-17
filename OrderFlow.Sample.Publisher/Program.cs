@@ -25,18 +25,10 @@ var host = Host.CreateDefaultBuilder(args)
             options.RetryCount = 3;
             options.RetryDelaySeconds = 2;
         });
+
+        services.AddHostedService<OrderCreatedPublisherHostedService>();
     })
     .Build();
-
-var bus = host.Services.GetRequiredService<IMessageBus>();
-
-var orderEvent = new OrderCreatedEvent
-{
-    OrderId = Guid.NewGuid(),
-    CreatedAt = DateTime.UtcNow
-};
-
-await bus.PublishAsync(orderEvent);
 
 Console.WriteLine("OrderCreatedEvent published!");
 
