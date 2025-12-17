@@ -6,13 +6,14 @@ using OrderFlow.Contracts.Events.Contracts;
 using OrderFlow.Messaging.Core.Extensions;
 using OrderFlow.Messaging.RabbitMQ;
 using OrderFlow.Messaging.RabbitMQ.Extensions;
+using Polly;
 
 var host = Host.CreateDefaultBuilder(args)
-    .ConfigureServices(services =>
+    .ConfigureServices((context, services) =>
     {
         services.AddRabbitMqMessaging(options =>
         {
-            options.Host = "localhost";
+            options.Host = "rabbitmq";
             options.Port = 5672;
             options.Username = "guest";
             options.Password = "guest";
@@ -20,6 +21,9 @@ var host = Host.CreateDefaultBuilder(args)
             options.ExchangeName = "orderflow.exchange";
             options.Queue = "orderflow.order-created.queue";
             options.RoutingKey = "order.created";
+
+            options.RetryCount = 3;
+            options.RetryDelaySeconds = 2;
         });
     })
     .Build();

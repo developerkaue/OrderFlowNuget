@@ -91,36 +91,20 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
 
             consumer.Received += async (_, ea) =>
             {
-                try
-                {
-                    await HandleMessageAsync<TMessage, TConsumer>(ea);
-
-                    _channel.BasicAck(ea.DeliveryTag, false);
-
-                    _logger.LogInformation(
-                        "Message processed successfully {MessageType} | MessageId={MessageId}",
-                        typeof(TMessage).Name,
-                        ea.BasicProperties?.MessageId);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(
-                        ex,
-                        "Message failed permanently {MessageType} | MessageId={MessageId}",
-                        typeof(TMessage).Name,
-                        ea.BasicProperties?.MessageId);
-
-                    _channel.BasicNack(
-                        deliveryTag: ea.DeliveryTag,
-                        multiple: false,
-                        requeue: false);
-                }
+                await HandleMessageAsync<TMessage, TConsumer>(ea);
             };
 
             _channel.BasicConsume(
                 queue: queueName,
                 autoAck: false,
-                consumer: consumer);
+                consumer: consumer
+            );
+
+            _logger.LogInformation(
+                "Subscribed to queue {QueueName} for message {MessageType}",
+                queueName,
+                typeof(TMessage).Name
+            );
         }
 
         private async Task HandleMessageAsync<TMessage, TConsumer>(BasicDeliverEventArgs eventArgs)
@@ -139,8 +123,6 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
 
             if (!string.IsNullOrWhiteSpace(messageId))
             {
-                 store = scope.ServiceProvider.GetRequiredService<IMessageProcessedStore>();
-
                 if (await store.HasBeenProcessedAsync(messageId))
                 {
                     _logger.LogWarning(
@@ -178,12 +160,20 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
                     messageId
                 );
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(
+                    ex,
+                    "Message failed permanently {MessageType} | MessageId={MessageId}",
+                    typeof(TMessage).Name,
+                    messageId
+                );
+
                 _channel.BasicNack(eventArgs.DeliveryTag, false, requeue: false);
                 throw;
             }
         }
+
 
 
 

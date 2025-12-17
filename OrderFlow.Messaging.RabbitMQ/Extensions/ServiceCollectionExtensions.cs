@@ -1,11 +1,11 @@
-﻿using Orderflow.Messaging.Abstractions.Abstractions;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Orderflow.Messaging.Abstractions.Abstractions;
+using OrderFlow.Messaging.Core.Configuration;
 using OrderFlow.Messaging.Core.Extensions;
 using OrderFlow.Messaging.RabbitMQ.Bus;
 using OrderFlow.Messaging.RabbitMQ.Configuration;
 using OrderFlow.Messaging.RabbitMQ.Connection;
-using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
 
 namespace OrderFlow.Messaging.RabbitMQ.Extensions
 {
@@ -18,10 +18,16 @@ namespace OrderFlow.Messaging.RabbitMQ.Extensions
             var options = new RabbitMqOptions();
             configure(options);
 
-            services.AddSingleton(options);
-            services.AddSingleton<IRabbitMqConnection, RabbitMqConnection>();
+            services.AddSingleton(new RetryOptions
+            {
+                MaxRetryAttempts = 3,
+                InitialDelay = TimeSpan.FromSeconds(2),
+            });
 
             services.AddMessagingCore();
+            services.AddSingleton(options);
+
+            services.AddSingleton<IRabbitMqConnection, RabbitMqConnection>();
             services.AddSingleton<IMessageBus, RabbitMqMessageBus>();
 
             return services;
