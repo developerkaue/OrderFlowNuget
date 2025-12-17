@@ -28,6 +28,7 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddScoped<OrderCreatedConsumer>();
         services.AddSingleton<IMessageProcessedStore, InMemoryMessageProcessedStore>();
 
+
         services.AddHostedService(provider =>
         {
             var bus = provider.GetRequiredService<IMessageBus>();

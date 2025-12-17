@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Orderflow.Messaging.Abstractions.Abstractions;
 using OrderFlow.Contracts.Events;
+using OrderFlow.Contracts.Events.Contracts;
 using OrderFlow.Messaging.Core.Extensions;
 using OrderFlow.Messaging.RabbitMQ;
 using OrderFlow.Messaging.RabbitMQ.Extensions;

@@ -48,6 +48,7 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
             where TMessage : IMessage
         {
             var messageId = Guid.NewGuid().ToString();
+            
             var correlationId = Guid.NewGuid().ToString();
 
             var properties = _channel.CreateBasicProperties();
@@ -123,34 +124,29 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
         }
 
         private async Task HandleMessageAsync<TMessage, TConsumer>(BasicDeliverEventArgs eventArgs)
-            where TMessage : IMessage
-            where TConsumer : IConsumer<TMessage>
+        where TMessage : IMessage
+        where TConsumer : IConsumer<TMessage>
         {
             using var scope = _serviceProvider.CreateScope();
 
             var consumer = scope.ServiceProvider.GetRequiredService<TConsumer>();
+            var store = scope.ServiceProvider.GetRequiredService<IMessageProcessedStore>();
 
             var message = _serializer.Deserialize<TMessage>(eventArgs.Body.ToArray());
 
             var messageId = eventArgs.BasicProperties?.MessageId;
             var correlationId = eventArgs.BasicProperties?.CorrelationId;
 
-            IMessageProcessedStore? store = null;
-
-            if (string.IsNullOrWhiteSpace(messageId))
+            if (!string.IsNullOrWhiteSpace(messageId))
             {
-                _logger.LogWarning(
-                    "Message received without MessageId, skipping idempotency check");
-            }
-            else
-            {
-                store = scope.ServiceProvider.GetRequiredService<IMessageProcessedStore>();
+                 store = scope.ServiceProvider.GetRequiredService<IMessageProcessedStore>();
 
                 if (await store.HasBeenProcessedAsync(messageId))
                 {
                     _logger.LogWarning(
                         "Duplicate message detected {MessageId}, ACK and skipping",
-                        messageId);
+                        messageId
+                    );
 
                     _channel.BasicAck(eventArgs.DeliveryTag, false);
                     return;
@@ -169,7 +165,7 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
                 await _retryPolicy.ExecuteAsync(() =>
                     consumer.ConsumeAsync(message, CancellationToken.None));
 
-                if (store != null && !string.IsNullOrWhiteSpace(messageId))
+                if (!string.IsNullOrWhiteSpace(messageId))
                 {
                     await store.MarkAsProcessedAsync(messageId);
                 }
@@ -182,23 +178,13 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
                     messageId
                 );
             }
-            catch (Exception ex)
+            catch
             {
-                _logger.LogError(
-                    ex,
-                    "Message processing failed {MessageType} | MessageId={MessageId}",
-                    typeof(TMessage).Name,
-                    messageId
-                );
-
-                _channel.BasicNack(
-                    eventArgs.DeliveryTag,
-                    multiple: false,
-                    requeue: false);
-
+                _channel.BasicNack(eventArgs.DeliveryTag, false, requeue: false);
                 throw;
             }
         }
+
 
 
         private void DeclareInfrastructure<TMessage>()
