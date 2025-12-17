@@ -1,10 +1,30 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+
+		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<IsPackable>true</IsPackable>
+
+		<PackageId>OrderFlow.Contracts.Events</PackageId>
+		<Version>1.0.0</Version>
+
+		<Authors>Kauê Fernandes</Authors>
+		<Company>Me</Company>
+
+		<Description>OrderFlow Messaging library</Description>
+		<PackageTags>messaging;rabbitmq;events;dotnet</PackageTags>
+
+		<RepositoryUrl>https://github.com/developerkaue/OrderFlowNuget</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Orderflow.Messaging.Abstractions\Orderflow.Messaging.Abstractions.csproj" />
