@@ -60,7 +60,7 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
             var body = _serializer.Serialize(message);
 
             var exchange = _options.ExchangeName;
-            var routingKey = typeof(TMessage).Name;
+            var routingKey = _options.RoutingKey ?? typeof(TMessage).Name;
 
             _logger.LogInformation(
                 "Publishing message {MessageType} | MessageId={MessageId} | CorrelationId={CorrelationId}",
@@ -78,14 +78,13 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
             await Task.CompletedTask;
         }
 
-
         public void Subscribe<TMessage, TConsumer>()
          where TMessage : IMessage
          where TConsumer : IConsumer<TMessage>
         {
-            DeclareInfrastructureOnce<TMessage>();
+            var queueName = _options.Queue ?? $"{typeof(TMessage).Name}.queue";
 
-            var queueName = $"{typeof(TMessage).Name}.queue";
+            DeclareInfrastructureOnce<TMessage>(queueName);
 
             var consumer = new AsyncEventingBasicConsumer(_channel);
 
@@ -174,13 +173,10 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
             }
         }
 
-
-
-
-        private void DeclareInfrastructure<TMessage>()
+        private void DeclareInfrastructure<TMessage>(string queueName)
         {
             var messageName = typeof(TMessage).Name;
-            var queueName = $"{messageName}.queue";
+            var routingKey = _options.RoutingKey ?? typeof(TMessage).Name;
 
             _channel.ExchangeDeclare(
                 exchange: _options.ExchangeName,
@@ -207,7 +203,7 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
             _channel.QueueBind(
                 queue: queueName,
                 exchange: _options.ExchangeName,
-                routingKey: messageName);
+                routingKey: routingKey);
 
             _channel.QueueDeclare(
                 queue: $"{queueName}.dlq",
@@ -218,21 +214,21 @@ namespace OrderFlow.Messaging.RabbitMQ.Bus
             _channel.QueueBind(
                 queue: $"{queueName}.dlq",
                 exchange: _options.DeadLetterExchange,
-                routingKey: messageName);
+                routingKey: routingKey);
         }
 
-
-        private void DeclareInfrastructureOnce<TMessage>()
+        private void DeclareInfrastructureOnce<TMessage>(string queueName)
         {
-            var queue = typeof(TMessage).Name;
 
-            if (!DeclaredQueues.Add(queue))
+            var routingKey = _options.RoutingKey ?? typeof(TMessage).Name;
+
+            var key = $"{typeof(TMessage).Name}_{queueName}";
+
+            if (!DeclaredQueues.Add(key))
                 return;
 
-            DeclareInfrastructure<TMessage>();
+            DeclareInfrastructure<TMessage>(queueName);
         }
-
-
 
     }
 }
