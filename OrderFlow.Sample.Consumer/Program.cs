@@ -1,9 +1,5 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Orderflow.Messaging.Abstractions.Abstractions;
+﻿using Orderflow.Messaging.Abstractions.Abstractions;
 using OrderFlow.Contracts.Events.Contracts;
-using OrderFlow.Messaging.Core.Extensions;
-using OrderFlow.Messaging.RabbitMQ;
 using OrderFlow.Messaging.RabbitMQ.Extensions;
 using OrderFlow.Sample.Consumer.Consumers;
 
@@ -12,24 +8,20 @@ var host = Host.CreateDefaultBuilder(args)
     {
         services.AddRabbitMqMessaging(options =>
         {
-            options.Host = "rabbitmq"; 
+            options.Host = "rabbitmq";
             options.Port = 5672;
             options.Username = "guest";
             options.Password = "guest";
-
             options.ExchangeName = "orderflow.exchange";
             options.Queue = "orderflow.order-created.queue";
             options.RoutingKey = "order.created";
-
             options.RetryCount = 3;
             options.RetryDelaySeconds = 2;
+            options.DeadLetterExchange = "orderflow.exchange.dlx";
         });
-
 
         services.AddScoped<OrderCreatedConsumer>();
         services.AddSingleton<IMessageProcessedStore, InMemoryMessageProcessedStore>();
-
-
         services.AddHostedService<BackgroundServiceWrapper>();
     })
     .Build();
@@ -39,7 +31,7 @@ var host = Host.CreateDefaultBuilder(args)
 await host.RunAsync();
 
 
-// Servi�o vazio apenas para manter o host vivo
+// Serviço vazio apenas para manter o host vivo
 public sealed class BackgroundServiceWrapper : BackgroundService
 {
     private readonly IServiceProvider _provider;

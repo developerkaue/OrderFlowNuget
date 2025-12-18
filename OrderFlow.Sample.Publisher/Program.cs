@@ -1,12 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Orderflow.Messaging.Abstractions.Abstractions;
-using OrderFlow.Contracts.Events;
-using OrderFlow.Contracts.Events.Contracts;
-using OrderFlow.Messaging.Core.Extensions;
-using OrderFlow.Messaging.RabbitMQ;
-using OrderFlow.Messaging.RabbitMQ.Extensions;
-using Polly;
+﻿using OrderFlow.Messaging.RabbitMQ.Extensions;
 
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((context, services) =>
@@ -30,6 +22,15 @@ var host = Host.CreateDefaultBuilder(args)
     })
     .Build();
 
+await host.StartAsync();
+
+Console.WriteLine("Host started. Publishing event...");
+
+await Task.Delay(2000);
+
 Console.WriteLine("OrderCreatedEvent published!");
 
 await host.StopAsync();
+
+Console.WriteLine("Host stopped.");
+ 
